@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Hapus Data Firebase</title>
+</head>
+<body>
+  <h3>Memproses penghapusan data...</h3>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    const firebaseURL = params.get("firebase_url");
+    const firebaseKey = params.get("firebase_key");
+    const bucket = params.get("firebase_bucket");
+    const userID = params.get("userID");
+
+    if (firebaseURL && firebaseKey && bucket && userID) {
+      const url = `${firebaseURL.replace(/\/$/, "")}/${bucket}/${userID}.json?auth=${firebaseKey}`;
+
+      fetch(url, { method: "DELETE" })
+        .then(res => res.json())
+        .then(() => {
+          document.body.innerHTML += "<p>✅ Data berhasil dihapus.</p>";
+        })
+        .catch(err => {
+          document.body.innerHTML += `<p style="color:red">❌ Gagal menghapus: ${err.message}</p>`;
+        });
+    } else {
+      document.body.innerHTML += "<p style='color:red'>❌ Parameter belum lengkap (firebase_url, firebase_key, bucket, atau userID).</p>";
+    }
+  </script>
+</body>
+</html>
