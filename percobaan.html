@@ -1,69 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kirim Data Firebase</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    .log {
-      background: #f0f0f0;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      white-space: pre-wrap;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Kirim ke Firebase</title>
 </head>
 <body>
-  <h2>Proses Kirim ke Firebase</h2>
-  <div class="log" id="log">Menunggu pengiriman...</div>
-
+  <h3>Mengirim data ke Firebase...</h3>
   <script>
     const params = new URLSearchParams(window.location.search);
+
     const firebaseURL = params.get("firebase_url");
     const firebaseKey = params.get("firebase_key");
     const bucket = params.get("firebase_bucket");
 
     const allowedKeys = [
-      "userID", "name", "alamat_a", "alamat_b",
-      "harga_total", "jarak", "durasi", "vehicle",
-      "from_lat", "from_lng", "to_lat", "to_lng"
+      "userID",
+      "name",
+      "alamat_a",
+      "alamat_b",
+      "harga_total",
+      "jarak",
+      "durasi",
+      "status",
+      "vehicle",
+      "from_lat",
+      "from_lng",
+      "to_lat",
+      "to_lng",
+      "harga",
+      "latlong_pengorder",
+      "PhoneNumber",
+      "waktu_order"
     ];
 
     const data = {};
     for (const key of allowedKeys) {
       const val = params.get(key);
-      if (val !== null) data[key] = isNaN(val) ? val : Number(val);
+      if (val !== null) {
+        data[key] = isNaN(val) ? val : Number(val);
+      }
     }
 
-    function sendToFirebase(url, key, bucket, data) {
-      const fullURL = `${url}/${bucket}.json?auth=${key}`;
-      fetch(fullURL, {
+    if (firebaseURL && firebaseKey && bucket) {
+      fetch(`${firebaseURL.replace(/\/$/, "")}/${bucket}.json?auth=${firebaseKey}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(data)
       })
       .then(res => res.json())
-      .then(json => {
-        document.getElementById('log').textContent = "Berhasil kirim:\n" + JSON.stringify(json, null, 2);
+      .then(result => {
+        document.body.innerHTML += `<p>✅ Data berhasil dikirim. ID: ${result.name}</p>`;
       })
       .catch(err => {
-        document.getElementById('log').textContent = "Gagal:\n" + err.message;
+        document.body.innerHTML += `<p style="color:red">❌ Gagal mengirim: ${err.message}</p>`;
       });
-    }
-
-    if (!firebaseURL || !firebaseKey || !bucket) {
-      document.getElementById('log').textContent = "Parameter firebase tidak lengkap di URL.";
     } else {
-      document.getElementById('log').textContent = "Mengirim data ke Firebase...";
-      sendToFirebase(firebaseURL, firebaseKey, bucket, data);
+      document.body.innerHTML += `<p style="color:red">❌ Parameter Firebase tidak lengkap.</p>`;
     }
-
-    document.addEventListener("contextmenu", e => e.preventDefault());
   </script>
 </body>
 </html>
