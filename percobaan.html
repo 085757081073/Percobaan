@@ -17,7 +17,7 @@
     function generateOrderId() {
       const timestamp = Date.now().toString(36);
       const randomStr = Math.random().toString(36).substr(2, 5);
-      return `${timestamp}_${randomStr}`; // Format lebih sederhana
+      return `${timestamp}_${randomStr}`;
     }
 
     const allowedKeys = [
@@ -52,9 +52,22 @@
     data.created_at = new Date().toISOString();
     data.updated_at = data.created_at;
     const order_id = generateOrderId();
+    data.order_id = order_id;
+
+    // Fungsi untuk mengirim data ke WebView
+    function sendToWebView(responseData) {
+      if (window.AppInventor && window.AppInventor.setWebViewString) {
+        window.AppInventor.setWebViewString(JSON.stringify(responseData));
+      } else if (window.AndroidInterface) {
+        window.AndroidInterface.receiveData(JSON.stringify(responseData));
+      } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosHandler) {
+        window.webkit.messageHandlers.iosHandler.postMessage(JSON.stringify(responseData));
+      } else {
+        console.log("WebView interface not found, data:", responseData);
+      }
+    }
 
     if (firebaseURL && firebaseKey && userID) {
-      // Langsung ke node pesanan/{order_id}
       const url = `${firebaseURL.replace(/\/$/, "")}/pesanan/${order_id}.json?auth=${firebaseKey}`;
       
       fetch(url, {
@@ -66,6 +79,19 @@
       })
       .then(res => res.json())
       .then(result => {
+        // Siapkan response untuk dikirim ke WebView
+        const response = {
+          status: "success",
+          message: "Data berhasil dikirim ke Firebase",
+          order_id: order_id,
+          firebase_data: data,
+          timestamp: new Date().toISOString()
+        };
+
+        // Kirim ke WebView
+        sendToWebView(response);
+
+        // Tampilkan di halaman
         document.body.innerHTML += `
           <p>✅ Data berhasil dikirim ke Firebase</p>
           <p><strong>Order ID:</strong> ${order_id}</p>
@@ -74,6 +100,17 @@
         `;
       })
       .catch(err => {
+        const errorResponse = {
+          status: "error",
+          message: "Gagal mengirim data ke Firebase",
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+
+        // Kirim error ke WebView
+        sendToWebView(errorResponse);
+
+        // Tampilkan error di halaman
         document.body.innerHTML += `
           <p style="color:red">❌ Gagal mengirim data</p>
           <p style="color:red">Error: ${err.message}</p>
@@ -81,6 +118,17 @@
         `;
       });
     } else {
+      const errorResponse = {
+        status: "error",
+        message: "Parameter tidak lengkap",
+        required_params: ["firebase_url", "firebase_key", "userID"],
+        timestamp: new Date().toISOString()
+      };
+
+      // Kirim error ke WebView
+      sendToWebView(errorResponse);
+
+      // Tampilkan error di halaman
       document.body.innerHTML += `
         <p style="color:red">❌ Parameter tidak lengkap</p>
         <p>Diperlukan:</p>
