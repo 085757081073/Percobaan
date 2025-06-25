@@ -14,6 +14,13 @@
     const bucket = params.get("firebase_bucket");
     const userID = params.get("userID");
 
+    // Fungsi untuk generate unique order ID
+    function generateOrderId() {
+      const timestamp = Date.now().toString(36);
+      const randomStr = Math.random().toString(36).substr(2, 5);
+      return `order_${timestamp}_${randomStr}`;
+    }
+
     const allowedKeys = [
       "userID",
       "name",
@@ -42,8 +49,15 @@
       }
     }
 
+    // Tambahkan timestamp dan order_id ke data
+    data.created_at = new Date().toISOString();
+    const order_id = generateOrderId();
+    data.order_id = order_id;
+
     if (firebaseURL && firebaseKey && bucket && userID) {
-      const url = `${firebaseURL.replace(/\/$/, "")}/${bucket}/${userID}.json?auth=${firebaseKey}`;
+      // Ubah path menjadi pesanan/{order_id}
+      const url = `${firebaseURL.replace(/\/$/, "")}/${bucket}/pesanan/${order_id}.json?auth=${firebaseKey}`;
+      
       fetch(url, {
         method: "PUT",
         headers: {
@@ -53,7 +67,11 @@
       })
       .then(res => res.json())
       .then(result => {
-        document.body.innerHTML += `<p>✅ Data berhasil dikirim untuk userID: ${userID}</p>`;
+        document.body.innerHTML += `
+          <p>✅ Data berhasil dikirim</p>
+          <p>Order ID: ${order_id}</p>
+          <p>User ID: ${userID}</p>
+        `;
       })
       .catch(err => {
         document.body.innerHTML += `<p style="color:red">❌ Gagal mengirim: ${err.message}</p>`;
