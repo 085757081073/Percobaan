@@ -11,14 +11,13 @@
 
     const firebaseURL = params.get("firebase_url");
     const firebaseKey = params.get("firebase_key");
-    const bucket = params.get("firebase_bucket");
     const userID = params.get("userID");
 
     // Fungsi untuk generate unique order ID
     function generateOrderId() {
       const timestamp = Date.now().toString(36);
       const randomStr = Math.random().toString(36).substr(2, 5);
-      return `order_${timestamp}_${randomStr}`;
+      return `${timestamp}_${randomStr}`; // Format lebih sederhana
     }
 
     const allowedKeys = [
@@ -49,14 +48,14 @@
       }
     }
 
-    // Tambahkan timestamp dan order_id ke data
+    // Tambahkan metadata
     data.created_at = new Date().toISOString();
+    data.updated_at = data.created_at;
     const order_id = generateOrderId();
-    data.order_id = order_id;
 
-    if (firebaseURL && firebaseKey && bucket && userID) {
-      // Ubah path menjadi pesanan/{order_id}
-      const url = `${firebaseURL.replace(/\/$/, "")}/${bucket}/pesanan/${order_id}.json?auth=${firebaseKey}`;
+    if (firebaseURL && firebaseKey && userID) {
+      // Langsung ke node pesanan/{order_id}
+      const url = `${firebaseURL.replace(/\/$/, "")}/pesanan/${order_id}.json?auth=${firebaseKey}`;
       
       fetch(url, {
         method: "PUT",
@@ -68,16 +67,29 @@
       .then(res => res.json())
       .then(result => {
         document.body.innerHTML += `
-          <p>✅ Data berhasil dikirim</p>
-          <p>Order ID: ${order_id}</p>
-          <p>User ID: ${userID}</p>
+          <p>✅ Data berhasil dikirim ke Firebase</p>
+          <p><strong>Order ID:</strong> ${order_id}</p>
+          <p><strong>User ID:</strong> ${userID}</p>
+          <p><strong>Waktu:</strong> ${new Date().toLocaleString()}</p>
         `;
       })
       .catch(err => {
-        document.body.innerHTML += `<p style="color:red">❌ Gagal mengirim: ${err.message}</p>`;
+        document.body.innerHTML += `
+          <p style="color:red">❌ Gagal mengirim data</p>
+          <p style="color:red">Error: ${err.message}</p>
+          <p>Pastikan URL Firebase dan API key benar</p>
+        `;
       });
     } else {
-      document.body.innerHTML += `<p style="color:red">❌ Parameter Firebase atau userID tidak lengkap.</p>`;
+      document.body.innerHTML += `
+        <p style="color:red">❌ Parameter tidak lengkap</p>
+        <p>Diperlukan:</p>
+        <ul>
+          <li>firebase_url</li>
+          <li>firebase_key</li>
+          <li>userID</li>
+        </ul>
+      `;
     }
   </script>
 </body>
