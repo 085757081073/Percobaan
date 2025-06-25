@@ -2,24 +2,21 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Kirim ke Firebase</title>
+  <title>Proses Order</title>
 </head>
 <body>
-  <h3>Mengirim data ke Firebase...</h3>
+  <h3>Memproses data order...</h3>
   <script>
     const params = new URLSearchParams(window.location.search);
-
-    const firebaseURL = params.get("firebase_url");
-    const firebaseKey = params.get("firebase_key");
-    const userID = params.get("userID");
 
     // Fungsi untuk generate unique order ID
     function generateOrderId() {
       const timestamp = Date.now().toString(36);
       const randomStr = Math.random().toString(36).substr(2, 5);
-      return `${timestamp}_${randomStr}`;
+      return `order_${timestamp}_${randomStr}`;
     }
 
+    // Data yang akan diambil dari URL
     const allowedKeys = [
       "userID",
       "name",
@@ -40,6 +37,7 @@
       "waktu_order"
     ];
 
+    // Mengumpulkan data dari URL
     const data = {};
     for (const key of allowedKeys) {
       const val = params.get(key);
@@ -48,95 +46,48 @@
       }
     }
 
-    // Tambahkan metadata
-    data.created_at = new Date().toISOString();
-    data.updated_at = data.created_at;
+    // Tambahkan order_id dan timestamp
     const order_id = generateOrderId();
     data.order_id = order_id;
+    data.timestamp = new Date().toISOString();
 
-    // Fungsi untuk mengirim data ke WebView
-    function sendToWebView(responseData) {
-      if (window.AppInventor && window.AppInventor.setWebViewString) {
-        window.AppInventor.setWebViewString(JSON.stringify(responseData));
-      } else if (window.AndroidInterface) {
-        window.AndroidInterface.receiveData(JSON.stringify(responseData));
-      } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosHandler) {
-        window.webkit.messageHandlers.iosHandler.postMessage(JSON.stringify(responseData));
-      } else {
-        console.log("WebView interface not found, data:", responseData);
+    // Fungsi untuk mengirim data ke WebView/App Inventor
+    function sendToWebString(responseData) {
+      try {
+        if (window.AppInventor && window.AppInventor.setWebViewString) {
+          window.AppInventor.setWebViewString(JSON.stringify(responseData));
+          return true;
+        } else if (window.AndroidInterface) {
+          window.AndroidInterface.receiveData(JSON.stringify(responseData));
+          return true;
+        } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosHandler) {
+          window.webkit.messageHandlers.iosHandler.postMessage(JSON.stringify(responseData));
+          return true;
+        }
+        return false;
+      } catch (e) {
+        console.error("Error sending to WebString:", e);
+        return false;
       }
     }
 
-    if (firebaseURL && firebaseKey && userID) {
-      const url = `${firebaseURL.replace(/\/$/, "")}/pesanan/${order_id}.json?auth=${firebaseKey}`;
-      
-      fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      })
-      .then(res => res.json())
-      .then(result => {
-        // Siapkan response untuk dikirim ke WebView
-        const response = {
-          status: "success",
-          message: "Data berhasil dikirim ke Firebase",
-          order_id: order_id,
-          firebase_data: data,
-          timestamp: new Date().toISOString()
-        };
+    // Kirim data langsung ke WebString
+    const sendResult = sendToWebString(data);
 
-        // Kirim ke WebView
-        sendToWebView(response);
-
-        // Tampilkan di halaman
-        document.body.innerHTML += `
-          <p>✅ Data berhasil dikirim ke Firebase</p>
-          <p><strong>Order ID:</strong> ${order_id}</p>
-          <p><strong>User ID:</strong> ${userID}</p>
-          <p><strong>Waktu:</strong> ${new Date().toLocaleString()}</p>
-        `;
-      })
-      .catch(err => {
-        const errorResponse = {
-          status: "error",
-          message: "Gagal mengirim data ke Firebase",
-          error: err.message,
-          timestamp: new Date().toISOString()
-        };
-
-        // Kirim error ke WebView
-        sendToWebView(errorResponse);
-
-        // Tampilkan error di halaman
-        document.body.innerHTML += `
-          <p style="color:red">❌ Gagal mengirim data</p>
-          <p style="color:red">Error: ${err.message}</p>
-          <p>Pastikan URL Firebase dan API key benar</p>
-        `;
-      });
-    } else {
-      const errorResponse = {
-        status: "error",
-        message: "Parameter tidak lengkap",
-        required_params: ["firebase_url", "firebase_key", "userID"],
-        timestamp: new Date().toISOString()
-      };
-
-      // Kirim error ke WebView
-      sendToWebView(errorResponse);
-
-      // Tampilkan error di halaman
+    // Tampilkan hasil di halaman
+    if (sendResult) {
       document.body.innerHTML += `
-        <p style="color:red">❌ Parameter tidak lengkap</p>
-        <p>Diperlukan:</p>
-        <ul>
-          <li>firebase_url</li>
-          <li>firebase_key</li>
-          <li>userID</li>
-        </ul>
+        <p>✅ Data berhasil dikirim ke aplikasi</p>
+        <p><strong>Order ID:</strong> ${order_id}</p>
+        <p><strong>Alamat Penjemputan:</strong> ${data.alamat_a || '-'}</p>
+        <p><strong>Alamat Tujuan:</strong> ${data.alamat_b || '-'}</p>
+        <p><strong>Waktu:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+      `;
+    } else {
+      document.body.innerHTML += `
+        <p style="color:red">❌ Gagal mengirim data ke aplikasi</p>
+        <p>Interface WebString tidak tersedia</p>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
       `;
     }
   </script>
